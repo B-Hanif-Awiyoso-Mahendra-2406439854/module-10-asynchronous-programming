@@ -18,7 +18,7 @@ async fn handle_connection(
             incoming = websocket.next() => {
                 match incoming {
                     Some(Ok(message)) if message.is_text() => {
-                        let text = message.as_text().unwrap().to_string();
+                        let text = format!("{addr}: {}", message.as_text().unwrap());
                         let _ = broadcast_sender.send(text);
                     }
                     Some(Ok(message)) if message.is_close() => break,

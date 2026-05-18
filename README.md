@@ -58,3 +58,18 @@ Bukti run:
 
 ![Experiment 2.2](docs/screenshots/experiment-2-2-1.png)
 ![Experiment 2.2](docs/screenshots/experiment-2-2-2.png)
+
+## Experiment 2.3: Small changes, add IP and Port
+
+Pada eksperimen ini server dimodifikasi agar pesan yang diterima dari client diberi informasi IP dan port pengirim. Informasi tersebut tersedia di sisi server melalui variabel `addr` yang didapat dari `listener.accept().await`. Perubahan dilakukan pada file `broadcast-chat/src/bin/server.rs`, tepatnya saat server menerima pesan teks dari websocket. Sebelum pesan dikirim ke broadcast channel, isi pesan diubah menjadi format `{addr}: {message}`. Saya memilih menambahkan informasi ini di server karena server mengetahui alamat remote sebenarnya dari setiap koneksi client. Jika alamat ditambahkan dari sisi client, data tersebut kurang kuat karena client bisa menulis identitas apa saja. Setelah perubahan ini, setiap client yang menerima pesan dapat melihat dari koneksi mana pesan itu berasal.
+
+Cara menjalankan server:
+cargo run -p broadcast-chat --bin server
+
+Cara menjalankan client:
+cargo run -p broadcast-chat --bin client
+
+Bukti run:
+
+![Experiment 2.3](docs/screenshots/experiment-2-3-1.png)
+![Experiment 2.3](docs/screenshots/experiment-2-3-2.png)
