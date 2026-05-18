@@ -2,7 +2,7 @@
 
 ## Experiment 1.1: Original timer from the book
 
-Program pada package `timer` dibuat berdasarkan contoh executor sederhana dari Rust Async Book. Bagian utama program terdiri dari `TimerFuture`, `Spawner`, `Executor`, dan `Task`. `Spawner` memasukkan future ke queue, lalu `Executor` mengambil task tersebut dan melakukan polling. Ketika timer belum selesai, `TimerFuture` mengembalikan `Poll::Pending` dan menyimpan `waker`. Setelah thread timer selesai tidur selama dua detik, waker dipanggil agar task dapat dipoll kembali. Hasil akhirnya adalah pesan `howdy!` muncul lebih dulu, lalu setelah jeda timer muncul pesan `done!`.
+Di eksperimen pertama ini saya mencoba menjalankan contoh timer dari Rust Async Book. Programnya memakai `TimerFuture`, `Spawner`, `Executor`, dan `Task`. Awalnya saya masih perlu melihat lagi hubungan antar bagian ini, karena executor-nya dibuat manual dan bukan memakai runtime seperti Tokio. Dari hasil run, program mencetak `howdy!`, lalu setelah sekitar dua detik baru mencetak `done!`. Ini terjadi karena `TimerFuture` menunggu thread timer selesai terlebih dahulu sebelum future dianggap selesai. Menurut saya bagian yang paling penting di sini adalah `waker`, karena dari situ task yang tadinya pending bisa dijalankan lagi oleh executor.
 
 Bukti run:
 
@@ -10,7 +10,7 @@ Bukti run:
 
 ## Experiment 1.2: Understanding how it works.
 
-Pada eksperimen ini saya menambahkan kalimat `Mahendra's Computer: hey hey!` setelah pemanggilan `spawner.spawn(...)`. Kalimat tersebut muncul sebelum `howdy!` dan `done!` karena `spawn` hanya memasukkan future ke queue, bukan langsung menjalankan seluruh isi async block sampai selesai. Isi async block baru mulai diproses ketika `executor.run()` dipanggil. Saat executor melakukan polling pertama, pesan `howdy!` muncul, lalu `TimerFuture` mengembalikan `Poll::Pending` karena timer belum selesai. Setelah dua detik, thread timer memanggil `waker` sehingga task dimasukkan kembali ke queue. Executor kemudian melakukan polling lagi dan program mencetak `done!`.
+Di eksperimen ini saya menambahkan print `Mahendra's Computer: hey hey!` setelah bagian `spawner.spawn(...)`. Setelah dijalankan, ternyata `hey hey!` muncul lebih dulu daripada `howdy!` dan `done!`. Awalnya ini agak membingungkan, karena secara kode `howdy!` ditulis di dalam `spawn` sebelum print `hey hey!`. Setelah diperhatikan, `spawn` ternyata hanya memasukkan task ke queue, belum langsung menjalankan isi async block sampai selesai. Isi async block baru diproses ketika `executor.run()` dipanggil. Karena itu print yang berada setelah `spawn` bisa muncul duluan, lalu executor baru mulai mem-poll task async-nya.
 
 Bukti run:
 
@@ -18,7 +18,7 @@ Bukti run:
 
 ## Experiment 1.3: Multiple Spawn and removing drop
 
-Pada eksperimen ini saya menambahkan tiga pemanggilan `spawner.spawn(...)` agar ada beberapa task async yang masuk ke queue executor. `Spawner` berfungsi sebagai pengirim task ke channel yang akan dibaca oleh executor. `Executor` berfungsi mengambil task dari queue, membuat waker, lalu melakukan polling terhadap future yang tersimpan di dalam task. Jika future belum selesai, future tersebut disimpan kembali agar dapat dilanjutkan ketika waker dipanggil. `drop(spawner)` berfungsi menutup sender utama setelah semua task awal dimasukkan ke queue. Jika `drop(spawner)` dihapus, executor masih menganggap ada kemungkinan task baru dikirim dari spawner utama, sehingga program dapat terus menunggu walaupun semua timer sudah selesai. Hubungannya adalah spawner memasukkan pekerjaan, executor menjalankan pekerjaan, dan drop memberi sinyal bahwa tidak ada pekerjaan baru lagi dari spawner utama.
+Pada bagian ini saya menambahkan beberapa `spawner.spawn(...)` supaya ada lebih dari satu task yang dijalankan. Setelah dijalankan, semua pesan `howdy`, `howdy2`, dan `howdy3` muncul, lalu setelah timer selesai muncul pesan `done`, `done2`, dan `done3`. Urutan selesai task bisa berbeda-beda sedikit karena task-task tersebut menunggu timer secara asynchronous. `Spawner` berperan untuk mengirim task ke queue, sedangkan `Executor` mengambil task dari queue dan melakukan polling. `drop(spawner)` juga ternyata penting, karena bagian itu menandakan bahwa tidak ada task baru lagi yang akan dikirim dari spawner utama. Saat saya mencoba menghilangkan `drop(spawner)`, program bisa terlihat tidak berhenti sendiri karena executor masih menunggu kemungkinan task baru dari channel. Dari eksperimen ini saya jadi lebih paham bahwa spawner, executor, dan drop saling berhubungan dalam mengatur kapan task masuk, dijalankan, dan kapan program boleh selesai.
 
 Bukti run dengan `drop(spawner)`:
 
@@ -28,13 +28,13 @@ Catatan percobaan tanpa `drop(spawner)`: output task tetap dapat muncul, tetapi 
 
 ## Experiment 2.1: Original code, and how it run
 
-Program `broadcast-chat` dibuat berdasarkan latihan Broadcast Chat Application dari Comprehensive Rust. Pada tahap ini server masih memakai port original `2000` dan client terhubung ke `ws://127.0.0.1:2000`. Server dijalankan pada satu terminal, lalu tiga client dijalankan pada tiga terminal lain. Ketika salah satu client mengetik pesan, pesan tersebut dikirim ke server melalui websocket. Server menerima pesan itu dan mengirimkannya ke broadcast channel. Semua client yang sedang subscribe ke channel tersebut akan menerima pesan dan mencetaknya di terminal masing-masing. Dengan cara ini satu pesan dari satu client dapat muncul di beberapa client tanpa client saling terhubung langsung.
+Untuk eksperimen 2.1 saya mencoba menjalankan broadcast chat dari Comprehensive Rust. Server dijalankan di satu terminal, lalu client dijalankan di beberapa terminal lain. Pada tahap ini port yang dipakai masih port awal, yaitu `2000`. Setelah tiga client berhasil connect, saya mencoba mengetik pesan dari salah satu client. Pesan tersebut masuk ke server melalui websocket, lalu server mengirim ulang pesan itu ke semua client yang sedang terhubung. Jadi client tidak saling mengirim pesan secara langsung, tetapi semuanya lewat server. Dari hasil ini terlihat kenapa websocket cocok untuk aplikasi chat, karena koneksi bisa tetap terbuka dan server bisa langsung mengirim pesan baru ke client.
 
 Cara menjalankan server:
-cargo run -p broadcast-chat --bin server
+`cargo run -p broadcast-chat --bin server`
 
 Cara menjalankan client:
-cargo run -p broadcast-chat --bin client
+`cargo run -p broadcast-chat --bin client`
 
 Bukti run:
 
@@ -46,13 +46,13 @@ Bukti run:
 
 ## Experiment 2.2: Modifying port
 
-Pada eksperimen ini port websocket diubah dari `2000` menjadi `8080`. Perubahan perlu dilakukan di dua sisi karena websocket membutuhkan alamat yang sama antara server dan client. Pada sisi server, port diubah di file `broadcast-chat/src/bin/server.rs` pada bagian `TcpListener::bind("127.0.0.1:8080")`. Pada sisi client, alamat websocket diubah di file `broadcast-chat/src/bin/client.rs` menjadi `ws://127.0.0.1:8080`. Protokol yang digunakan tetap websocket dan ditandai dengan prefix `ws://` pada URL client. Jika hanya server yang diubah, client masih akan mencoba connect ke port lama sehingga koneksi gagal. Jika hanya client yang diubah, client akan mencoba port baru tetapi server tidak mendengarkan di sana. Setelah kedua sisi memakai port `8080`, chat tetap berjalan seperti eksperimen sebelumnya.
+Di eksperimen ini saya mengubah port websocket dari `2000` menjadi `8080`. Port ini tidak cukup diganti di satu tempat saja, karena server dan client harus menunjuk ke alamat yang sama. Di server, bagian yang saya ubah adalah `TcpListener::bind("127.0.0.1:8080")`. Di client, bagian yang saya ubah adalah URL websocket menjadi `ws://127.0.0.1:8080`. Prefix `ws://` menunjukkan bahwa koneksi yang dipakai adalah websocket. Kalau hanya server yang diganti, client masih mencoba connect ke port lama dan hasilnya gagal. Kalau hanya client yang diganti, client mencoba port baru tetapi server tidak mendengarkan di port tersebut. Setelah keduanya sama-sama memakai `8080`, aplikasi chat bisa berjalan lagi seperti sebelumnya.
 
 Cara menjalankan server:
-cargo run -p broadcast-chat --bin server
+`cargo run -p broadcast-chat --bin server`
 
 Cara menjalankan client:
-cargo run -p broadcast-chat --bin client
+`cargo run -p broadcast-chat --bin client`
 
 Bukti run:
 
@@ -61,13 +61,13 @@ Bukti run:
 
 ## Experiment 2.3: Small changes, add IP and Port
 
-Pada eksperimen ini server dimodifikasi agar pesan yang diterima dari client diberi informasi IP dan port pengirim. Informasi tersebut tersedia di sisi server melalui variabel `addr` yang didapat dari `listener.accept().await`. Perubahan dilakukan pada file `broadcast-chat/src/bin/server.rs`, tepatnya saat server menerima pesan teks dari websocket. Sebelum pesan dikirim ke broadcast channel, isi pesan diubah menjadi format `{addr}: {message}`. Saya memilih menambahkan informasi ini di server karena server mengetahui alamat remote sebenarnya dari setiap koneksi client. Jika alamat ditambahkan dari sisi client, data tersebut kurang kuat karena client bisa menulis identitas apa saja. Setelah perubahan ini, setiap client yang menerima pesan dapat melihat dari koneksi mana pesan itu berasal.
+Pada eksperimen ini saya menambahkan informasi IP dan port pengirim ke pesan chat. Bagian ini saya ubah di server, karena server punya informasi alamat client dari hasil `listener.accept().await`. Saat server menerima pesan teks dari websocket, pesan itu saya ubah dulu menjadi format `{addr}: {message}` sebelum dikirim ke broadcast channel. Dengan begitu client lain bisa melihat pesan tersebut berasal dari koneksi yang mana. Saya memilih menaruh perubahan ini di server karena kalau alamat ditulis dari client, client bisa saja menulis identitas apa pun. Setelah dicoba, pesan yang muncul di terminal client sekarang punya tambahan alamat seperti `127.0.0.1:xxxxx`. Ini membuat alur pengiriman pesan antar client jadi lebih mudah diamati.
 
 Cara menjalankan server:
-cargo run -p broadcast-chat --bin server
+`cargo run -p broadcast-chat --bin server`
 
 Cara menjalankan client:
-cargo run -p broadcast-chat --bin client
+`cargo run -p broadcast-chat --bin client`
 
 Bukti run:
 
@@ -76,16 +76,16 @@ Bukti run:
 
 ## Experiment 3.1: Original code
 
-Pada eksperimen ini saya menambahkan webchat client berbasis Yew. Client web berjalan di browser dengan bantuan Trunk dan mencoba terhubung ke websocket pada `ws://127.0.0.1:8080`. Sebelum menjalankan web client, server websocket dari Tutorial 2 perlu dijalankan terlebih dahulu. Ketika user mengetik pesan di browser, pesan dikirim melalui websocket ke server. Server kemudian membroadcast pesan tersebut ke client lain yang sedang terhubung. Pada tahap ini tampilan masih dibuat sederhana agar fokusnya ada pada koneksi websocket dan alur pesan asynchronous. Bagian ini memperlihatkan bahwa browser client tetap responsif sambil menunggu pesan masuk dari stream websocket.
+Di eksperimen 3.1 saya menambahkan client webchat berbasis Yew. Web client ini dijalankan di browser dengan Trunk dan terhubung ke server websocket di `ws://127.0.0.1:8080`. Sebelum membuka webchat, server dari Tutorial 2 harus dijalankan dulu. Setelah halaman terbuka dan statusnya connected, pesan bisa dikirim dari browser ke server. Server kemudian membroadcast pesan itu seperti pada eksperimen sebelumnya. Pada tahap ini tampilannya masih sederhana karena fokus saya adalah memastikan koneksi websocket dari browser ke server Rust berjalan. Dari bagian ini saya melihat bahwa konsep asynchronous juga muncul di sisi browser, karena halaman tetap bisa dipakai sambil menunggu pesan baru dari websocket.
 
 Cara menjalankan server:
-cargo run -p broadcast-chat --bin server
+`cargo run -p broadcast-chat --bin server`
 
 Cara menjalankan webchat:
-rustup target add wasm32-unknown-unknown
-cargo install trunk
-cd webchat-yew
-trunk serve --port 8081
+`rustup target add wasm32-unknown-unknown`
+`cargo install trunk`
+`cd webchat-yew`
+`trunk serve --port 8081`
 
 Bukti run:
 
@@ -94,14 +94,14 @@ Bukti run:
 
 ## Experiment 3.2: Be Creative!
 
-Pada eksperimen ini saya menambahkan beberapa kreativitas pada webchat client. Tampilan webchat diubah menjadi layout dua panel yang responsif, dengan sidebar berisi nama aplikasi, status koneksi, dan konteks singkat. Pesan di area chat sekarang tampil dalam bentuk kartu kecil agar lebih mudah dibaca. Browser client juga mengirim pesan dalam format JSON berisi `from` dan `text`, sehingga pesan dari browser dapat memiliki label pengirim. Jika server belum berjalan, aplikasi menampilkan status menunggu server dan tombol kirim tidak aktif. Pada layar kecil, layout berubah menjadi satu kolom agar tetap nyaman digunakan. Perubahan ini membuat webchat tidak hanya berjalan secara teknis, tetapi juga lebih jelas dan enak dipakai sebagai aplikasi browser.
+Untuk bagian kreativitas, saya mengubah tampilan webchat supaya tidak terlalu polos. Saya membuat layout dua panel, yaitu sidebar di kiri dan area chat di kanan. Sidebar berisi nama aplikasi, status koneksi, dan sedikit konteks tentang aplikasi. Pesan di area chat juga saya buat seperti kartu kecil supaya lebih mudah dibaca. Selain tampilan, browser client juga saya ubah agar mengirim pesan dalam format JSON dengan field `from` dan `text`. Kalau server belum berjalan, status akan menunjukkan bahwa aplikasi masih menunggu server dan tombol kirim tidak aktif. Layout juga dibuat responsif supaya saat layar kecil, tampilannya berubah menjadi satu kolom. Menurut saya perubahan ini membuat webchat terasa lebih seperti aplikasi yang benar-benar dipakai, bukan hanya demo input dan tombol.
 
 Cara menjalankan server:
-cargo run -p broadcast-chat --bin server
+`cargo run -p broadcast-chat --bin server`
 
 Cara menjalankan webchat:
-cd webchat-yew
-trunk serve --port 8081
+`cd webchat-yew`
+`trunk serve --port 8081`
 
 Bukti run:
 
@@ -110,14 +110,14 @@ Bukti run:
 
 ## Bonus: Rust Websocket server for YewChat!
 
-Pada bagian bonus ini server websocket Rust dari Tutorial 2 dimodifikasi agar dapat melayani YewChat dari Tutorial 3. Masalah utamanya adalah format pesan: client console mengirim teks biasa, sedangkan YewChat lebih cocok memakai pesan JSON dengan field `from` dan `text`. Untuk menyelesaikannya, server Rust sekarang mencoba membaca setiap pesan sebagai JSON terlebih dahulu. Jika pesan valid JSON, server mempertahankan format tersebut dan membroadcast ulang ke semua client. Jika pesan bukan JSON, server mengubahnya menjadi JSON dengan `from` berisi IP dan port pengirim, lalu `text` berisi pesan asli. Perubahan ini membuat client browser dapat menampilkan label pengirim dengan rapi, sementara client console tetap dapat digunakan. Saya menganggap perubahan ini berhasil jika YewChat dapat connect ke server Rust, mengirim pesan, menerima pesan broadcast, dan tetap kompatibel dengan client terminal. Saya lebih memilih versi Rust untuk server karena tipe data pesan bisa dibuat eksplisit dengan `serde`, error handling lebih terstruktur, dan server console serta webchat bisa berada dalam satu alur pembelajaran Rust.
+Untuk bonus, saya mencoba membuat server Rust dari Tutorial 2 bisa dipakai oleh YewChat dari Tutorial 3. Tantangannya ada di format pesan, karena client terminal mengirim teks biasa, sedangkan webchat lebih enak kalau memakai JSON dengan `from` dan `text`. Solusi yang saya pakai adalah server mencoba membaca pesan sebagai JSON terlebih dahulu. Kalau pesan valid JSON, server akan membroadcast JSON itu lagi. Kalau pesan bukan JSON, server mengubahnya menjadi JSON dengan `from` berisi IP dan port pengirim, lalu `text` berisi pesan asli. Dengan cara ini, YewChat tetap bisa menampilkan label pengirim secara rapi, tetapi client terminal juga masih bisa digunakan. Saya menganggap perubahan ini berhasil karena YewChat bisa connect ke server Rust, mengirim pesan, dan menerima pesan broadcast. Menurut saya server Rust lebih menarik untuk kasus ini karena tipe data pesannya bisa dibuat jelas dengan `serde`, walaupun versi JavaScript mungkin lebih cepat untuk dibuat di awal.
 
 Cara menjalankan server Rust:
-cargo run -p broadcast-chat --bin server
+`cargo run -p broadcast-chat --bin server`
 
 Cara menjalankan YewChat:
-cd webchat-yew
-trunk serve --port 8081
+`cd webchat-yew`
+`trunk serve --port 8081`
 
 Bukti run:
 
