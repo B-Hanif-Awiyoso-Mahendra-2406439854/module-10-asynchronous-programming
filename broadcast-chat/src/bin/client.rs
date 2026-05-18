@@ -5,14 +5,14 @@ use tokio_websockets::{ClientBuilder, Message};
 
 #[tokio::main]
 async fn main() -> Result<(), tokio_websockets::Error> {
-    let (mut websocket, _) = ClientBuilder::from_uri(Uri::from_static("ws://127.0.0.1:2000"))
+    let (mut websocket, _) = ClientBuilder::from_uri(Uri::from_static("ws://127.0.0.1:8080"))
         .connect()
         .await?;
 
     let stdin = tokio::io::stdin();
     let mut stdin = BufReader::new(stdin).lines();
 
-    println!("Connected to ws://127.0.0.1:2000");
+    println!("Connected to ws://127.0.0.1:8080");
     println!("Type a message and press Enter.");
 
     loop {

@@ -43,3 +43,18 @@ Bukti run:
 ![Experiment 2.1](docs/screenshots/experiment-2-1-3.png)
 ![Experiment 2.1](docs/screenshots/experiment-2-1-4.png)
 ![Experiment 2.1](docs/screenshots/experiment-2-1-5.png)
+
+## Experiment 2.2: Modifying port
+
+Pada eksperimen ini port websocket diubah dari `2000` menjadi `8080`. Perubahan perlu dilakukan di dua sisi karena websocket membutuhkan alamat yang sama antara server dan client. Pada sisi server, port diubah di file `broadcast-chat/src/bin/server.rs` pada bagian `TcpListener::bind("127.0.0.1:8080")`. Pada sisi client, alamat websocket diubah di file `broadcast-chat/src/bin/client.rs` menjadi `ws://127.0.0.1:8080`. Protokol yang digunakan tetap websocket dan ditandai dengan prefix `ws://` pada URL client. Jika hanya server yang diubah, client masih akan mencoba connect ke port lama sehingga koneksi gagal. Jika hanya client yang diubah, client akan mencoba port baru tetapi server tidak mendengarkan di sana. Setelah kedua sisi memakai port `8080`, chat tetap berjalan seperti eksperimen sebelumnya.
+
+Cara menjalankan server:
+cargo run -p broadcast-chat --bin server
+
+Cara menjalankan client:
+cargo run -p broadcast-chat --bin client
+
+Bukti run:
+
+![Experiment 2.2](docs/screenshots/experiment-2-2-1.png)
+![Experiment 2.2](docs/screenshots/experiment-2-2-2.png)
