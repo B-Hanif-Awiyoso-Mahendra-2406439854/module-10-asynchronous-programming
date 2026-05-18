@@ -1,7 +1,5 @@
 # Screenshot Checklist
 
-Simpan screenshot hasil run di folder ini dengan nama berikut agar cocok dengan README:
-
 - `experiment-1-1`
 ![alt text](experiment-1-1.png)
 - `experiment-1-2`
