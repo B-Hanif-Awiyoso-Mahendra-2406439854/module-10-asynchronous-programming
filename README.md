@@ -91,3 +91,19 @@ Bukti run:
 
 ![Experiment 3.1](docs/screenshots/experiment-3-1-1.png)
 ![Experiment 3.1](docs/screenshots/experiment-3-1-2.png)
+
+## Experiment 3.2: Be Creative!
+
+Pada eksperimen ini saya menambahkan beberapa kreativitas pada webchat client. Tampilan webchat diubah menjadi layout dua panel yang responsif, dengan sidebar berisi nama aplikasi, status koneksi, dan konteks singkat. Pesan di area chat sekarang tampil dalam bentuk kartu kecil agar lebih mudah dibaca. Browser client juga mengirim pesan dalam format JSON berisi `from` dan `text`, sehingga pesan dari browser dapat memiliki label pengirim. Jika server belum berjalan, aplikasi menampilkan status menunggu server dan tombol kirim tidak aktif. Pada layar kecil, layout berubah menjadi satu kolom agar tetap nyaman digunakan. Perubahan ini membuat webchat tidak hanya berjalan secara teknis, tetapi juga lebih jelas dan enak dipakai sebagai aplikasi browser.
+
+Cara menjalankan server:
+cargo run -p broadcast-chat --bin server
+
+Cara menjalankan webchat:
+cd webchat-yew
+trunk serve --port 8081
+
+Bukti run:
+
+![Experiment 3.2](docs/screenshots/experiment-3-2-1.png)
+![Experiment 3.2](docs/screenshots/experiment-3-2-2.png)
