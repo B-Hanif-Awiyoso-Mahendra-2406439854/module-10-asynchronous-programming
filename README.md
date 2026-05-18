@@ -15,3 +15,13 @@ Pada eksperimen ini saya menambahkan kalimat `Mahendra's Computer: hey hey!` set
 Bukti run:
 
 ![Experiment 1.2](docs/screenshots/experiment-1-2.png)
+
+## Experiment 1.3: Multiple Spawn and removing drop
+
+Pada eksperimen ini saya menambahkan tiga pemanggilan `spawner.spawn(...)` agar ada beberapa task async yang masuk ke queue executor. `Spawner` berfungsi sebagai pengirim task ke channel yang akan dibaca oleh executor. `Executor` berfungsi mengambil task dari queue, membuat waker, lalu melakukan polling terhadap future yang tersimpan di dalam task. Jika future belum selesai, future tersebut disimpan kembali agar dapat dilanjutkan ketika waker dipanggil. `drop(spawner)` berfungsi menutup sender utama setelah semua task awal dimasukkan ke queue. Jika `drop(spawner)` dihapus, executor masih menganggap ada kemungkinan task baru dikirim dari spawner utama, sehingga program dapat terus menunggu walaupun semua timer sudah selesai. Hubungannya adalah spawner memasukkan pekerjaan, executor menjalankan pekerjaan, dan drop memberi sinyal bahwa tidak ada pekerjaan baru lagi dari spawner utama.
+
+Bukti run dengan `drop(spawner)`:
+
+![Experiment 1.3](docs/screenshots/experiment-1-3.png)
+
+Catatan percobaan tanpa `drop(spawner)`: output task tetap dapat muncul, tetapi proses tidak selesai sendiri karena executor masih menunggu pesan baru dari channel.
