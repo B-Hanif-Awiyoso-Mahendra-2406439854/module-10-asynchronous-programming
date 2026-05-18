@@ -7,3 +7,11 @@ Program pada package `timer` dibuat berdasarkan contoh executor sederhana dari R
 Bukti run:
 
 ![Experiment 1.1](docs/screenshots/experiment-1-1.png)
+
+## Experiment 1.2: Understanding how it works.
+
+Pada eksperimen ini saya menambahkan kalimat `Mahendra's Computer: hey hey!` setelah pemanggilan `spawner.spawn(...)`. Kalimat tersebut muncul sebelum `howdy!` dan `done!` karena `spawn` hanya memasukkan future ke queue, bukan langsung menjalankan seluruh isi async block sampai selesai. Isi async block baru mulai diproses ketika `executor.run()` dipanggil. Saat executor melakukan polling pertama, pesan `howdy!` muncul, lalu `TimerFuture` mengembalikan `Poll::Pending` karena timer belum selesai. Setelah dua detik, thread timer memanggil `waker` sehingga task dimasukkan kembali ke queue. Executor kemudian melakukan polling lagi dan program mencetak `done!`.
+
+Bukti run:
+
+![Experiment 1.2](docs/screenshots/experiment-1-2.png)
