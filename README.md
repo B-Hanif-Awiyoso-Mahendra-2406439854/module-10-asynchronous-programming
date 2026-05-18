@@ -73,3 +73,21 @@ Bukti run:
 
 ![Experiment 2.3](docs/screenshots/experiment-2-3-1.png)
 ![Experiment 2.3](docs/screenshots/experiment-2-3-2.png)
+
+## Experiment 3.1: Original code
+
+Pada eksperimen ini saya menambahkan webchat client berbasis Yew. Client web berjalan di browser dengan bantuan Trunk dan mencoba terhubung ke websocket pada `ws://127.0.0.1:8080`. Sebelum menjalankan web client, server websocket dari Tutorial 2 perlu dijalankan terlebih dahulu. Ketika user mengetik pesan di browser, pesan dikirim melalui websocket ke server. Server kemudian membroadcast pesan tersebut ke client lain yang sedang terhubung. Pada tahap ini tampilan masih dibuat sederhana agar fokusnya ada pada koneksi websocket dan alur pesan asynchronous. Bagian ini memperlihatkan bahwa browser client tetap responsif sambil menunggu pesan masuk dari stream websocket.
+
+Cara menjalankan server:
+cargo run -p broadcast-chat --bin server
+
+Cara menjalankan webchat:
+rustup target add wasm32-unknown-unknown
+cargo install trunk
+cd webchat-yew
+trunk serve --port 8081
+
+Bukti run:
+
+![Experiment 3.1](docs/screenshots/experiment-3-1-1.png)
+![Experiment 3.1](docs/screenshots/experiment-3-1-2.png)
