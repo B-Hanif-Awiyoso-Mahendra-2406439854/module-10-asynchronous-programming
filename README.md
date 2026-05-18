@@ -30,18 +30,10 @@ Catatan percobaan tanpa `drop(spawner)`: output task tetap dapat muncul, tetapi 
 
 Program `broadcast-chat` dibuat berdasarkan latihan Broadcast Chat Application dari Comprehensive Rust. Pada tahap ini server masih memakai port original `2000` dan client terhubung ke `ws://127.0.0.1:2000`. Server dijalankan pada satu terminal, lalu tiga client dijalankan pada tiga terminal lain. Ketika salah satu client mengetik pesan, pesan tersebut dikirim ke server melalui websocket. Server menerima pesan itu dan mengirimkannya ke broadcast channel. Semua client yang sedang subscribe ke channel tersebut akan menerima pesan dan mencetaknya di terminal masing-masing. Dengan cara ini satu pesan dari satu client dapat muncul di beberapa client tanpa client saling terhubung langsung.
 
-Cara menjalankan server:
-
-```bash
-cargo run -p broadcast-chat --bin server
-```
-
-Cara menjalankan client, buka tiga terminal terpisah:
-
-```bash
-cargo run -p broadcast-chat --bin client
-```
-
 Bukti run:
 
-![Experiment 2.1](docs/screenshots/experiment-2-1.png)
+![Experiment 2.1](docs/screenshots/experiment-2-1-1.png)
+![Experiment 2.1](docs/screenshots/experiment-2-1-2.png)
+![Experiment 2.1](docs/screenshots/experiment-2-1-3.png)
+![Experiment 2.1](docs/screenshots/experiment-2-1-4.png)
+![Experiment 2.1](docs/screenshots/experiment-2-1-5.png)
