@@ -1,10 +1,17 @@
 use futures_util::{SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
 use std::{error::Error, net::SocketAddr};
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::broadcast::{channel, Sender},
 };
 use tokio_websockets::{Message, ServerBuilder, WebSocketStream};
+
+#[derive(Deserialize, Serialize)]
+struct ChatPayload {
+    from: String,
+    text: String,
+}
 
 async fn handle_connection(
     addr: SocketAddr,
@@ -18,7 +25,7 @@ async fn handle_connection(
             incoming = websocket.next() => {
                 match incoming {
                     Some(Ok(message)) if message.is_text() => {
-                        let text = format!("{addr}: {}", message.as_text().unwrap());
+                        let text = normalize_message(addr, message.as_text().unwrap());
                         let _ = broadcast_sender.send(text);
                     }
                     Some(Ok(message)) if message.is_close() => break,
@@ -36,6 +43,26 @@ async fn handle_connection(
 
     println!("{addr} disconnected");
     Ok(())
+}
+
+fn normalize_message(addr: SocketAddr, text: &str) -> String {
+    match serde_json::from_str::<ChatPayload>(text) {
+        Ok(mut payload) => {
+            if payload.from.trim().is_empty() {
+                payload.from = addr.to_string();
+            }
+            serde_json::to_string(&payload)
+                .unwrap_or_else(|_| format!(r#"{{"from":"{addr}","text":"{text}"}}"#))
+        }
+        Err(_) => {
+            let payload = ChatPayload {
+                from: addr.to_string(),
+                text: text.to_string(),
+            };
+            serde_json::to_string(&payload)
+                .unwrap_or_else(|_| format!(r#"{{"from":"{addr}","text":"{text}"}}"#))
+        }
+    }
 }
 
 #[tokio::main]

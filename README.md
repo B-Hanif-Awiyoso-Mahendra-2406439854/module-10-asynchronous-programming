@@ -107,3 +107,19 @@ Bukti run:
 
 ![Experiment 3.2](docs/screenshots/experiment-3-2-1.png)
 ![Experiment 3.2](docs/screenshots/experiment-3-2-2.png)
+
+## Bonus: Rust Websocket server for YewChat!
+
+Pada bagian bonus ini server websocket Rust dari Tutorial 2 dimodifikasi agar dapat melayani YewChat dari Tutorial 3. Masalah utamanya adalah format pesan: client console mengirim teks biasa, sedangkan YewChat lebih cocok memakai pesan JSON dengan field `from` dan `text`. Untuk menyelesaikannya, server Rust sekarang mencoba membaca setiap pesan sebagai JSON terlebih dahulu. Jika pesan valid JSON, server mempertahankan format tersebut dan membroadcast ulang ke semua client. Jika pesan bukan JSON, server mengubahnya menjadi JSON dengan `from` berisi IP dan port pengirim, lalu `text` berisi pesan asli. Perubahan ini membuat client browser dapat menampilkan label pengirim dengan rapi, sementara client console tetap dapat digunakan. Saya menganggap perubahan ini berhasil jika YewChat dapat connect ke server Rust, mengirim pesan, menerima pesan broadcast, dan tetap kompatibel dengan client terminal. Saya lebih memilih versi Rust untuk server karena tipe data pesan bisa dibuat eksplisit dengan `serde`, error handling lebih terstruktur, dan server console serta webchat bisa berada dalam satu alur pembelajaran Rust.
+
+Cara menjalankan server Rust:
+cargo run -p broadcast-chat --bin server
+
+Cara menjalankan YewChat:
+cd webchat-yew
+trunk serve --port 8081
+
+Bukti run:
+
+![Bonus](docs/screenshots/bonus-1.png)
+![Bonus](docs/screenshots/bonus-2.png)
